@@ -37,8 +37,9 @@ prompts for `TYPESAFE_API_KEY` (saved to `~/.hermes/.env`), or set it yourself.
 - `timeout_seconds` — HTTP timeout (default 30)
 - `max_questions` — max questions per `jev_evaluate` call (default 20)
 
-Each setting is read on its own; an invalid value falls back to its default
-without discarding the others.
+Each setting is read on its own; an invalid value (including a non-positive
+`timeout_seconds` or `max_questions`) falls back to its default without
+discarding the others.
 
 ## Coding-agent recipes
 

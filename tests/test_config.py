@@ -12,6 +12,7 @@ import importlib.util
 import sys
 import types
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -81,6 +82,20 @@ class ConfigTests(unittest.TestCase):
         out = tools.evaluate({"state": "x", "questions": qs}, ctx=ctx)
         self.assertIn("Too many questions", out)
         self.assertIn("max is 1", out)
+
+
+    def test_non_positive_numbers_fall_back_to_defaults(self):
+        for bad in (-1, 0, "-5"):
+            cfg = tools._config(FakeCtx({"max_questions": bad, "timeout_seconds": bad}))
+            self.assertEqual(cfg["max_questions"], 20, bad)
+            self.assertEqual(cfg["timeout_seconds"], client.DEFAULT_TIMEOUT, bad)
+
+    def test_negative_limit_does_not_reject_every_request(self):
+        offline = mock.patch.object(client, "call_system_one", side_effect=client.JevError("offline"))
+        with offline:
+            out = tools.evaluate({"state": "x", "questions": {"a": {"type": "noul", "instructions": "Is it A?"}}},
+                                 ctx=FakeCtx({"max_questions": -1}))
+        self.assertNotIn("Too many questions", out)
 
 
 if __name__ == "__main__":

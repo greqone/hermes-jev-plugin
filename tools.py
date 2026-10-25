@@ -20,11 +20,21 @@ DEFAULT_MAX_QUESTIONS = 20
 # Hermes reserves the plugin-settings roots `model`, `plugins`, `security` and
 # `settings`: ctx.get_config("model") raises. The model id is therefore read
 # from `jev_model`.
+def _positive(cast):
+    def parse(value):
+        number = cast(value)
+        if number <= 0:
+            raise ValueError(f"expected a positive number, got {value!r}")
+        return number
+    return parse
+
+
 _SETTINGS = (
-    # (config key, cfg key, cast, default)
+    # (config key, cfg key, parser, default). A value the parser rejects falls back
+    # to its default, so a non-positive limit or timeout cannot disable the tool.
     ("jev_model", "model", str, client.DEFAULT_MODEL),
-    ("timeout_seconds", "timeout_seconds", float, client.DEFAULT_TIMEOUT),
-    ("max_questions", "max_questions", int, DEFAULT_MAX_QUESTIONS),
+    ("timeout_seconds", "timeout_seconds", _positive(float), client.DEFAULT_TIMEOUT),
+    ("max_questions", "max_questions", _positive(int), DEFAULT_MAX_QUESTIONS),
 )
 
 
@@ -37,10 +47,10 @@ def _config(ctx: Any) -> dict:
     cfg = {name: default for _, name, _, default in _SETTINGS}
     if ctx is None:
         return cfg
-    for key, name, cast, default in _SETTINGS:
+    for key, name, parse, default in _SETTINGS:
         try:
             value = ctx.get_config(key, default=default)
-            cfg[name] = cast(value) if value not in (None, "") else default
+            cfg[name] = parse(value) if value not in (None, "") else default
         except Exception:
             cfg[name] = default
     return cfg
